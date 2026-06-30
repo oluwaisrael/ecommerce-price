@@ -4,11 +4,11 @@ scraper = cloudscraper.create_scraper()
 
 # Testing out different URL patterns
 urls = [
-    "https://www.jumia.com.ng/phones/",
-    "https://www.jumia.com.ng/mobile-phones/",
-    "https://www.jumia.com.ng/category/phones/",
-    "https://www.jumia.com.ng/search/?q=phones",
-    "https://www.jumia.com.ng/",  #if cloudscraper works, this should return the homepage
+    "https://www.konga.com.ng/phones/",
+    "https://www.konga.com.ng/mobile-phones/",
+    "https://www.konga.com.ng/category/phones/",
+    "https://www.konga.com.ng/search/?q=phones",
+    "https://www.konga.com.ng/",  #if cloudscraper works, this should return the homepage
 ]
 
 for url in urls:
@@ -19,4 +19,4 @@ for url in urls:
         if response.status_code == 200:
             print(f"  Works!")
     except Exception as e:
-        print(f"   ❌ Error: {e}")
+        print(f"Error: {e}")

@@ -1,21 +1,20 @@
 import cloudscraper
 from bs4 import BeautifulSoup
 from typing import List, Dict
-from datetime import datetime 
+from datetime import datetime
 import logging
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-class JumiaScraper:
+class KongaScraper:
     def __init__(self):
-        self.base_url = "https://www.jumia.com.ng"
+        self.base_url = "https://www.konga.com"
         self.scraper = cloudscraper.create_scraper()
         
     def scrape_category(self, category: str = "mobile-phones", item_count: int = 5) -> List[Dict]:
-        """Scrape products from Jumia"""
-        # Use the working URL
-        url = f"{self.base_url}/{category}/"
+        """Scrape products from Konga"""
+        url = f"{self.base_url}/category/{category}"
         
         try:
             print(f" Fetching: {url}")
@@ -27,45 +26,37 @@ class JumiaScraper:
                 return []
             
             soup = BeautifulSoup(response.content, "html.parser")
-            
-            # Finding the product containers (articles with class 'prd')
-            products_html = soup.find_all("article", class_="prd", limit=item_count)
+            products_html = soup.find_all("div", class_="product-item", limit=item_count)
             
             print(f"Found {len(products_html)} products")
             
             if not products_html:
-                logger.warning(f"No products found. Debug: printing first 2000 chars of HTML")
-                print(response.text[:2000])
+                logger.warning("No products found")
                 return []
             
             products = []
             for product in products_html:
                 try:
-                    # Extract from link's data attributes (verified working)
-                    link_tag = product.find("a", class_="core")
+                    # Extract product info
+                    link_tag = product.find("a")
                     if not link_tag:
                         continue
                     
-                    name = link_tag.get("data-ga4-item_name", "Unknown").strip()
+                    name = link_tag.get_text(strip=True) or "Unknown"
                     product_url = link_tag.get("href", "")
                     if product_url and not product_url.startswith("http"):
                         product_url = f"{self.base_url}{product_url}"
                     
-                    # Price extraction (working)
-                    price_tag = product.find(class_="prc")
+                    price_tag = product.find("span", class_="price")
                     price_text = price_tag.text.strip() if price_tag else "0"
                     price = price_text.replace("₦", "").replace(",", "").strip()
-                    
-                    # Seller info (optional, fallback to Jumia)
-                    seller_tag = product.find("span", class_="seller")
-                    seller = seller_tag.text.strip() if seller_tag else "Jumia"
                     
                     product_data = {
                         "name": name,
                         "price": float(price) if price else 0.0,
                         "url": product_url,
-                        "seller": seller,
-                        "site": "Jumia",
+                        "seller": "Konga",
+                        "site": "Konga",
                         "category": category,
                         "scraped_at": datetime.now().isoformat()
                     }
@@ -84,7 +75,7 @@ class JumiaScraper:
             return []
 
 def main():
-    scraper = JumiaScraper()
+    scraper = KongaScraper()
     products = scraper.scrape_category("mobile-phones", item_count=5)
     
     print(f"\n Scraped {len(products)} products:\n")
