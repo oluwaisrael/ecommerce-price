@@ -46,7 +46,8 @@ class JumiaScraper:
                     if not link_tag:
                         continue
                     
-                    name = link_tag.get("data-ga4-item_name", "Unknown").strip()
+                    name_tag = product.find("h3", class_="name")
+                    name = name_tag.text.strip() if name_tag else "Unknown"
                     product_url = link_tag.get("href", "")
                     if product_url and not product_url.startswith("http"):
                         product_url = f"{self.base_url}{product_url}"
