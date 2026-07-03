@@ -1,8 +1,11 @@
 import cloudscraper
+import requests
 from bs4 import BeautifulSoup
 from typing import List, Dict
-from datetime import datetime 
+from datetime import datetime
 import logging
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -11,6 +14,39 @@ class JumiaScraper:
     def __init__(self):
         self.base_url = "https://www.jumia.com.ng"
         self.scraper = cloudscraper.create_scraper()
+
+        retries = Retry(
+            total=3,
+            connect=3,
+            read=2,
+            backoff_factor=1,
+            status_forcelist=[429, 500, 502, 503, 504],
+        )
+        adapter = HTTPAdapter(max_retries=retries)
+        self.scraper.mount("https://", adapter)
+        self.scraper.mount("http://", adapter)
+
+    def _extract_name(self, product) -> str:
+        """Try multiple selectors in order; log which one worked."""
+        candidates = [
+            ("h3.name", lambda p: p.find("h3", class_="name")),
+            ("a[title]", lambda p: p.find("a", class_="core")),
+            ("img[alt]", lambda p: p.find("img")),
+        ]
+        for label, finder in candidates:
+            el = finder(product)
+            if el is None:
+                continue
+            if el.name == "h3":
+                text = el.text.strip()
+            else:
+                text = el.get("title") or el.get("alt")
+                text = text.strip() if text else None
+            if text:
+                if label != "h3.name":
+                    logger.info(f"Name extracted via fallback: {label}")
+                return text
+        return None
         
     def scrape_category(self, category: str = "mobile-phones", item_count: int = 5) -> List[Dict]:
         """Scrape products from Jumia"""
@@ -19,7 +55,14 @@ class JumiaScraper:
         
         try:
             print(f" Fetching: {url}")
-            response = self.scraper.get(url, timeout=10)
+            try:
+                response = self.scraper.get(url, timeout=15)
+            except requests.exceptions.ConnectTimeout:
+                logger.error(f"Jumia unresponsive (connect timeout) for {url}")
+                return []
+            except requests.exceptions.RequestException as e:
+                logger.error(f"Jumia request failed: {e}")
+                return []
             print(f" Status: {response.status_code}")
             
             if response.status_code != 200:
@@ -46,8 +89,11 @@ class JumiaScraper:
                     if not link_tag:
                         continue
                     
-                    name_tag = product.find("h3", class_="name")
-                    name = name_tag.text.strip() if name_tag else "Unknown"
+                    name = self._extract_name(product)
+                    if not name:
+                        logger.warning("No name found via any selector - skipping product")
+                        continue
+
                     product_url = link_tag.get("href", "")
                     if product_url and not product_url.startswith("http"):
                         product_url = f"{self.base_url}{product_url}"
