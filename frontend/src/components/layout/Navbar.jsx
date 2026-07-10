@@ -1,0 +1,17 @@
+import styles from './Navbar.module.css'
+
+function Navbar() {
+  return (
+    <header className={styles.navbar}>
+      <div className={styles.left}>
+        <span className={styles.logo}>Price Intelligence</span>
+      </div>
+      <nav className={styles.right}>
+        <a href="#products" className={styles.navLink}>Products</a>
+        <a href="#" className={styles.navLink}>About</a>
+      </nav>
+    </header>
+  )
+}
+
+export default Navbar
