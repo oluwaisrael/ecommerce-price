@@ -1,4 +1,4 @@
-import CanvasPlaceholder from './CanvasPlaceholder'
+import PriceUniverse from '../../scenes/PriceUniverse/PriceUniverse'
 import SearchInput from '../ui/SearchInput'
 import styles from './Hero.module.css'
 
@@ -13,7 +13,7 @@ function Hero({ searchValue, onSearchChange }) {
         <SearchInput value={searchValue} onChange={onSearchChange} />
       </div>
       <div className={styles.canvasArea}>
-        <CanvasPlaceholder />
+        <PriceUniverse searchValue={searchValue} />
       </div>
     </section>
   )

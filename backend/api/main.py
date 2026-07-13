@@ -1,15 +1,30 @@
 from fastapi import FastAPI, HTTPException
-from db.database import connect_db, disconnect_db, insert_products, get_latest_products, get_product_history
+from fastapi.responses import StreamingResponse
+
+from db.database import (
+    connect_db,
+    disconnect_db,
+    insert_products,
+    get_latest_products,
+    get_product_history,
+)
+
 from fastapi.middleware.cors import CORSMiddleware
+
 from datetime import datetime
+from urllib.parse import urlparse
+from io import BytesIO
+
+import httpx
 import sys
 import os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from scrapers.jumia_scraper import JumiaScraper
-from scrapers.jiji_scraper import JijiScraper
 
 app = FastAPI()
+ALLOWED_IMAGE_HOSTS = {
+    "pictures-nigeria.jijistatic.net",
+    "ng.jumia.is",
+    "i.jumia.is",
+}
 
 app.add_middleware(
     CORSMiddleware,
@@ -91,7 +106,28 @@ async def product_history(url: str, site: str = None):
     if not history:
         raise HTTPException(status_code=404, detail="No history found for that url/site")
     return {"url": url, "count": len(history), "history": history}
+@app.get("/api/image-proxy")
+async def image_proxy(url: str):
+    """
+    Proxies product images from Jumia/Jiji CDNs. Browsers get blocked
+    (hotlink/CORS protection) fetching these directly from
+    localhost:5173; fetching server-to-server has no such restriction.
+    Only allowlisted hosts are proxied — this must stay strict, or
+    this endpoint becomes an open relay for arbitrary URLs.
+    """
+    parsed = urlparse(url)
+    if parsed.hostname not in ALLOWED_IMAGE_HOSTS:
+        raise HTTPException(status_code=400, detail="Image host not allowed")
 
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.get(url, timeout=10.0, follow_redirects=True)
+            response.raise_for_status()
+        except httpx.HTTPError as e:
+            raise HTTPException(status_code=502, detail=f"Failed to fetch image: {e}")
+
+    content_type = response.headers.get("content-type", "image/jpeg")
+    return StreamingResponse(BytesIO(response.content), media_type=content_type)
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

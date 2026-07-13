@@ -43,3 +43,19 @@
     height: 480px;
   }
 }
+
+@media (max-width: 640px) {
+  .hero {
+    padding: 1.5rem 1rem;
+    gap: 1.25rem;
+  }
+
+  .title {
+    font-size: 1.6rem;
+  }
+
+  .canvasArea {
+    height: 60vh;
+    min-height: 340px;
+  }
+}

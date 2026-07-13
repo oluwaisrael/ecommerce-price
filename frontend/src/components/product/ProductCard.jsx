@@ -1,7 +1,8 @@
+import { BASE_URL } from '../../api/client'
 import styles from './ProductCard.module.css'
 
 // Field names match GET /api/products response: product_name, price
-// (integer naira), url, site, category, image_url.
+// (integer naira), url, site, category.
 function formatPrice(price) {
   if (typeof price !== 'number') return '—'
   return new Intl.NumberFormat('en-NG', {
@@ -11,11 +12,19 @@ function formatPrice(price) {
   }).format(price)
 }
 
+// Jumia/Jiji CDN images block direct browser fetches (hotlink/CORS
+// protection) — route through the backend's server-to-server proxy
+// instead, same as the PriceUniverse 3D scene does.
+function proxiedImageUrl(imageUrl) {
+  if (!imageUrl) return null
+  return `${BASE_URL}/api/image-proxy?url=${encodeURIComponent(imageUrl)}`
+}
+
 function ProductCard({ product }) {
   const name = product?.product_name ?? 'Product name'
   const price = formatPrice(product?.price)
   const site = product?.site ?? 'Source'
-  const imageUrl = product?.image_url
+  const imageUrl = proxiedImageUrl(product?.image_url)
 
   return (
     <article className={styles.card}>
