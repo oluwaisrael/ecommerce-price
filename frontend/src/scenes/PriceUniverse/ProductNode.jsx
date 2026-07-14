@@ -14,7 +14,7 @@ import styles from './ProductNode.module.css'
  * data yet (no history aggregation on the backend). Revisit once
  * that's available rather than fabricating placeholder numbers here.
  */
-const NODE_RADIUS = 1.8
+const NODE_RADIUS = 0.5
 const HOVER_SCALE = 1.5
 const SELECTED_SCALE = 1.3
 const LERP_SPEED = 0.15
@@ -81,7 +81,7 @@ function ProductNode({ node, isSelected, onSelect }) {
       {showCard && (
         <Html
           position={[
-            node.position[0] + NODE_RADIUS + 1.5,
+            node.position[0] + NODE_RADIUS + 0.6,
             node.position[1],
             node.position[2],
           ]}

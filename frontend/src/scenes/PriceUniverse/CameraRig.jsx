@@ -3,15 +3,15 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { OrbitControls } from '@react-three/drei'
 import * as THREE from 'three'
 
-const DEFAULT_CAMERA_POSITION = new THREE.Vector3(40, 30, 40)
-const DEFAULT_TARGET = new THREE.Vector3(0, 20, 0)
-const FOCUS_DISTANCE = 14
+const DEFAULT_CAMERA_POSITION = new THREE.Vector3(0, 16, 58)
+const DEFAULT_TARGET = new THREE.Vector3(0, 0, 0)
+const FOCUS_DISTANCE = 5
 const LERP_SPEED = 0.06
 const ARRIVE_EPSILON = 0.15
 
 const IDLE_TIMEOUT = 4000
-const DRIFT_RADIUS = 55
-const DRIFT_HEIGHT = 26
+const DRIFT_RADIUS = 58
+const DRIFT_HEIGHT = 12
 const DRIFT_SPEED = 0.02
 
 function CameraRig({ selectedNode }) {
@@ -68,7 +68,7 @@ function CameraRig({ selectedNode }) {
         DRIFT_HEIGHT,
         Math.sin(driftAngle.current) * DRIFT_RADIUS
       )
-      desiredTarget.current.set(0, 20, 0)
+      desiredTarget.current.set(0, 0, 0)
     }
 
     const distanceToGoal = camera.position.distanceTo(desiredPosition.current)

@@ -3,9 +3,9 @@ import { Billboard, useTexture } from '@react-three/drei'
 import { useThree } from '@react-three/fiber'
 import ImageErrorBoundary from './ImageErrorBoundary'
 
-const NODE_RADIUS = 0.35
-const BILLBOARD_MAX_DIM = 4
-const FORWARD_OFFSET = NODE_RADIUS + 1.5
+const NODE_RADIUS = 0.5
+const BILLBOARD_MAX_DIM = 1.1
+const FORWARD_OFFSET = NODE_RADIUS + 0.4
 
 const NARROW_ASPECT_BREAKPOINT = 0.7
 const MIN_SCALE = 0.45

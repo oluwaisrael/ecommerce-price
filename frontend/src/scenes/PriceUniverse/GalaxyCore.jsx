@@ -16,14 +16,14 @@ function GalaxyCore({ center, color }) {
   return (
     <group position={position}>
       <mesh>
-        <sphereGeometry args={[3.2, 32, 32]} />
+        <sphereGeometry args={[1.1, 32, 32]} />
         <meshBasicMaterial color={color} toneMapped={false} />
       </mesh>
 
       {/* Soft outer glow shell — larger, dimmer, additive-feeling via
           transparency, gives the core a halo instead of a hard edge. */}
       <mesh>
-        <sphereGeometry args={[6, 24, 24]} />
+        <sphereGeometry args={[2.2, 24, 24]} />
         <meshBasicMaterial
           color={color}
           toneMapped={false}
@@ -33,12 +33,12 @@ function GalaxyCore({ center, color }) {
         />
       </mesh>
 
-      <pointLight color={color} intensity={4} distance={90} decay={2} />
+      <pointLight color={color} intensity={3} distance={36} decay={2} />
 
       <Sparkles
         count={60}
-        scale={[50, 6, 50]}
-        size={2.5}
+        scale={[19, 2.5, 19]}
+        size={1.4}
         speed={0.15}
         opacity={0.5}
         color={color}

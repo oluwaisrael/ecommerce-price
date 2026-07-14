@@ -7,6 +7,7 @@ import { normalizeProducts } from './normalizeProducts'
 import { computeGalaxyLayout, getGalaxyCenters } from './galaxyLayout'
 import ProductNode from './ProductNode'
 import GalaxyCore from './GalaxyCore'
+import GalaxyStarfield from './GalaxyStarfield'
 import CameraRig from './CameraRig'
 import DetailPanel from './DetailPanel'
 import styles from './PriceUniverse.module.css'
@@ -67,14 +68,14 @@ function PriceUniverse({ searchValue = '' }) {
   return (
     <div className={styles.canvasWrapper}>
       <Canvas
-        camera={{ position: [40, 30, 40], fov: 50, far: 2000 }}
+        camera={{ position: [0, 16, 58], fov: 50, far: 2000 }}
         onPointerMissed={() => setSelectedId(null)}
       >
         <color attach="background" args={['#03030a']} />
-        <fog attach="fog" args={['#03030a', 60, 260]} />
+        <fog attach="fog" args={['#03030a', 40, 180]} />
 
         <ambientLight intensity={0.3} />
-        <pointLight position={[0, 60, 0]} intensity={1.5} />
+        <pointLight position={[0, 14, 0]} intensity={1.5} />
 
         <Stars
           radius={200}
@@ -93,6 +94,8 @@ function PriceUniverse({ searchValue = '' }) {
             color={GALAXY_CORE_COLORS[site] ?? '#ffffff'}
           />
         ))}
+
+        <GalaxyStarfield />
 
         <Suspense fallback={null}>
           {nodes.map((node) => (
