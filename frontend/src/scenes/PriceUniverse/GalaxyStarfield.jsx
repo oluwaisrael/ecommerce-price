@@ -4,10 +4,15 @@ import { generateFillerStars } from './galaxyLayout'
 
 const SITE_COLORS = {
   Jumia: '#ff9900',
-  Jiji: '#4fbbad',
+  Jiji: '#22e5e5',
 }
 
-
+// Deterministic wide-field ambient dust — fine, dim, mostly-white
+// specks scattered across the whole navigable area (not anchored to
+// either galaxy's center). The per-galaxy haze in generateFillerStars()
+// stays close to each core, so the open black space between and
+// around the two galaxies was reading as empty; this fills it in
+// without competing with either galaxy's color identity.
 const AMBIENT_DUST_COUNT = 260
 const AMBIENT_DUST_SPREAD_X = 70
 const AMBIENT_DUST_SPREAD_Z = 55
@@ -41,6 +46,8 @@ function buildAmbientDust() {
     positions[i * 3 + 1] = y
     positions[i * 3 + 2] = z
 
+    // Cool, mostly-white/blue-gray tint so it reads as neutral
+    // background dust rather than belonging to either galaxy.
     const brightness = 0.3 + hashToUnitLocal(`${seed}-b`) * 0.35
     colors[i * 3] = brightness * 0.85
     colors[i * 3 + 1] = brightness * 0.9
@@ -61,7 +68,10 @@ function buildBuffers(stars) {
     positions[i * 3 + 2] = star.position[2]
 
     color.set(SITE_COLORS[star.site] ?? '#ffffff')
-    
+    // Raised floor/range (was 0.35 + scale*0.25, capping under 0.6) —
+    // at the default camera distance (~58-70 units) points this dim
+    // were essentially sub-pixel specks even with Bloom active, which
+    // is why the spiral wasn't reading despite the correct math.
     const brightness = 0.65 + star.scale * 0.55
     colors[i * 3] = color.r * brightness
     colors[i * 3 + 1] = color.g * brightness
@@ -71,6 +81,17 @@ function buildBuffers(stars) {
   return { positions, colors }
 }
 
+/**
+ * GalaxyStarfield — dense, purely decorative filler points tracing
+ * clean spiral arms (small, brighter, sequentially placed along the
+ * curve) plus a soft nebula haze (larger, dimmer, randomly scattered
+ * in a halo around each galaxy). Two separate THREE.Points clouds
+ * since size/opacity can't vary per-point on a single material
+ * without a custom shader — not needed at this point count.
+ *
+ * generateFillerStars() is deterministic and has no dependency on
+ * fetched data, so both buffers are built once via useMemo.
+ */
 function GalaxyStarfield() {
   const { armBuffers, hazeBuffers, ambientBuffers } = useMemo(() => {
     const stars = generateFillerStars()

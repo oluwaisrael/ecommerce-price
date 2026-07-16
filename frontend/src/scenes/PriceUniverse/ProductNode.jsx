@@ -4,7 +4,23 @@ import { Html } from '@react-three/drei'
 import ProductImage from './ProductImage'
 import styles from './ProductNode.module.css'
 
-
+/**
+ * ProductNode — interaction sphere + billboard + hover card.
+ *
+ * Hover card (panel 03 in the design reference) shows name, site
+ * (colored by marketplace, matching the node/galaxy tint), and
+ * price. Lowest/highest price and price-drop frequency from the
+ * mockup are NOT included — normalizeProducts() doesn't expose that
+ * data yet (no history aggregation on the backend). Revisit once
+ * that's available rather than fabricating placeholder numbers here.
+ *
+ * priceScale (0..1, log-scaled like the existing height calculation
+ * in galaxyLayout.js) approximates "how expensive is this relative to
+ * its own marketplace's range" using node.priceRank if the caller
+ * supplied one, falling back to a neutral 0.5 — this keeps
+ * ProductNode standalone-renderable without requiring every caller to
+ * pass min/max price context it may not have.
+ */
 const NODE_RADIUS = 0.5
 const HOVER_SCALE = 1.5
 const SELECTED_SCALE = 1.3
@@ -25,7 +41,18 @@ function ProductNode({ node, isSelected, onSelect }) {
   const targetScale = isSelected ? SELECTED_SCALE : isHovered ? HOVER_SCALE : 1
   const targetEmissive = isSelected ? 0.9 : isHovered ? 0.7 : 0.3
 
-  useFrame(() => {
+  // Gentle idle float: a small per-node sine offset added on top of
+  // the node's fixed layout position, so nodes feel alive rather than
+  // frozen in place. Phase is derived from node.id so nodes don't all
+  // bob in lockstep. Purely visual — node.position itself (used by
+  // DetailPanel, CameraRig fly-to, and the underlying click target
+  // math) is untouched; only the rendered mesh position gets the
+  // offset, applied each frame directly on the ref.
+  const floatSeed = useRef(
+    Array.from(String(node.id)).reduce((acc, ch) => acc + ch.charCodeAt(0), 0) % 1000
+  )
+
+  useFrame((state) => {
     if (!meshRef.current) return
     const s = meshRef.current.scale
     const next = s.x + (targetScale - s.x) * LERP_SPEED
@@ -33,9 +60,20 @@ function ProductNode({ node, isSelected, onSelect }) {
 
     const mat = meshRef.current.material
     mat.emissiveIntensity += (targetEmissive - mat.emissiveIntensity) * LERP_SPEED
+
+    const t = state.clock.elapsedTime + floatSeed.current
+    const floatOffset = Math.sin(t * 0.6) * 0.08
+    meshRef.current.position.y = node.position[1] + floatOffset
   })
 
   const showCard = isHovered && !isSelected
+
+  // priceScale: caller (PriceUniverse) attaches node.priceScale as a
+  // 0..1 value derived the same way priceToHeight already derives
+  // height in galaxyLayout.js, so "higher price = bigger card" uses
+  // the identical log-normalized ranking as "higher price = higher in
+  // space" rather than inventing a second scale.
+  const priceScale = typeof node.priceScale === 'number' ? node.priceScale : 0.5
 
   return (
     <group>
@@ -67,7 +105,14 @@ function ProductNode({ node, isSelected, onSelect }) {
         />
       </mesh>
 
-      <ProductImage url={node.image} position={node.position} color={node.color} />
+      <ProductImage
+        url={node.image}
+        position={node.position}
+        color={node.color}
+        name={node.name}
+        priceScale={priceScale}
+        isHovered={isHovered}
+      />
 
       {showCard && (
         <Html

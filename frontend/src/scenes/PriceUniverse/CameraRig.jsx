@@ -14,6 +14,18 @@ const DRIFT_RADIUS = 58
 const DRIFT_HEIGHT = 12
 const DRIFT_SPEED = 0.02
 
+// Cinematic "breathing" — a slow, small sinusoidal offset layered on
+// top of the existing circular drift path, purely additive. This does
+// not change isDrifting/idle-timer/fly-to logic at all; it only
+// perturbs the *target* position slightly each frame while drifting,
+// so the camera feels alive instead of moving on a perfectly clean
+// circle. Amplitude is deliberately small relative to DRIFT_RADIUS/
+// DRIFT_HEIGHT so it reads as a gentle sway, not a bob.
+const BREATH_HEIGHT_AMPLITUDE = 1.1
+const BREATH_HEIGHT_SPEED = 0.35
+const BREATH_RADIUS_AMPLITUDE = 1.6
+const BREATH_RADIUS_SPEED = 0.22
+
 function CameraRig({ selectedNode }) {
   const controlsRef = useRef()
   const { camera } = useThree()
@@ -60,13 +72,19 @@ function CameraRig({ selectedNode }) {
 
   useEffect(() => clearIdleTimer, [])
 
-  useFrame((_, delta) => {
+  useFrame((state, delta) => {
     if (isDrifting.current && !selectedNode) {
       driftAngle.current += DRIFT_SPEED * delta
+
+      const t = state.clock.elapsedTime
+      const breathHeight = Math.sin(t * BREATH_HEIGHT_SPEED) * BREATH_HEIGHT_AMPLITUDE
+      const breathRadius = Math.sin(t * BREATH_RADIUS_SPEED + 1.3) * BREATH_RADIUS_AMPLITUDE
+      const effectiveRadius = DRIFT_RADIUS + breathRadius
+
       desiredPosition.current.set(
-        Math.cos(driftAngle.current) * DRIFT_RADIUS,
-        DRIFT_HEIGHT,
-        Math.sin(driftAngle.current) * DRIFT_RADIUS
+        Math.cos(driftAngle.current) * effectiveRadius,
+        DRIFT_HEIGHT + breathHeight,
+        Math.sin(driftAngle.current) * effectiveRadius
       )
       desiredTarget.current.set(0, 0, 0)
     }
@@ -75,12 +93,19 @@ function CameraRig({ selectedNode }) {
     const programmaticMotion = isDrifting.current || distanceToGoal > ARRIVE_EPSILON
 
     if (programmaticMotion) {
+      // We own the camera fully right now. OrbitControls must stay
+      // disabled — even calling its update() re-derives camera
+      // position from its own internal spherical state and fights
+      // our lerp, which is what caused the in/out oscillation.
       if (controlsRef.current) controlsRef.current.enabled = false
 
       camera.position.lerp(desiredPosition.current, LERP_SPEED)
       camera.lookAt(desiredTarget.current)
     } else {
-      
+      // Arrived and idle (not drifting): hand control back. Sync
+      // OrbitControls' internal target/state to the camera's actual
+      // current position/orientation first so re-enabling doesn't
+      // cause a jump.
       if (controlsRef.current && !controlsRef.current.enabled) {
         controlsRef.current.target.copy(desiredTarget.current)
         controlsRef.current.update()
