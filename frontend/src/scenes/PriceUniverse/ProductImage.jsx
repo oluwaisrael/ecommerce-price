@@ -16,8 +16,31 @@ const MIN_SCALE = 0.45
 // 0..1 already computed by ProductNode from the node's price relative
 // to that galaxy's min/max — this file just maps it onto a visual
 // multiplier.
-const MIN_PRICE_SCALE = 0.82
-const MAX_PRICE_SCALE = 1.35
+const MIN_PRICE_SCALE = 0.78
+const MAX_PRICE_SCALE = 1.3
+
+// Small deterministic per-node jitter — a slight in-plane rotation and
+// a small extra forward/lateral offset — so cards at similar spiral
+// radii don't sit at visually identical depth/orientation and blur
+// together into one mass when several are close. Hashed from a seed
+// string (not Math.random) so layout stays stable across re-renders,
+// matching the determinism convention already used in galaxyLayout.js.
+const ROTATION_JITTER_RAD = 0.18
+const OFFSET_JITTER = 0.35
+
+function hashToUnit(str) {
+  let h = 2166136261
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i)
+    h = Math.imul(h, 16777619)
+  }
+  h ^= h >>> 16
+  h = Math.imul(h, 0x85ebca6b)
+  h ^= h >>> 13
+  h = Math.imul(h, 0xc2b2ae35)
+  h ^= h >>> 16
+  return (h >>> 0) / 4294967295
+}
 
 function getResponsiveMaxDim(aspect) {
   if (aspect >= NARROW_ASPECT_BREAKPOINT) return BILLBOARD_MAX_DIM
@@ -27,15 +50,21 @@ function getResponsiveMaxDim(aspect) {
 }
 
 // Frame padding + glow sizing, relative to the image plane's own
-// dimensions rather than fixed units, so the frame scales correctly
-// for both wide and narrow (responsive) images. Previous values
-// (0.16 / 0.5) against a ~1.1-unit plane produced a border only a
-// few pixels wide at the ~58-unit default camera distance — visible
-// in a close-up but not at overview scale, which is why the frame
-// wasn't reading as a "framed card" like the mockup. Padding roughly
-// doubled/tripled here.
-const FRAME_PADDING = 0.32
-const GLOW_PADDING = 0.85
+// dimensions. Previous pass (0.32 / 0.85) made the glow almost 3x the
+// image's own footprint at high opacity — that oversized, bright halo
+// is what was reading as "glowing squares" rather than product photos,
+// and why adjacent nodes' glows overlapped into a single mass. Both
+// cut down hard: the frame is now a thin accent line (not a filled
+// block competing with the photo), and the idle glow is small and
+// dim, existing as a subtle rim rather than the dominant visual
+// element. Hover glow (see CardFrame below) is a separate, much
+// stronger pulse layered on top only for the hovered node, so
+// "hover intensifies only that node" actually reads as a real change
+// instead of being lost in an already-bright baseline.
+const FRAME_PADDING = 0.06
+const GLOW_PADDING = 0.14
+const IDLE_GLOW_OPACITY = 0.16
+const HOVER_GLOW_OPACITY = 0.6
 
 /**
  * CardFrame — the glow + border + backing chrome shared by both the
@@ -51,17 +80,20 @@ function CardFrame({ frameColor, planeWidth, planeHeight, isHovered, children })
   const glowWidth = planeWidth + GLOW_PADDING * 2
   const glowHeight = planeHeight + GLOW_PADDING * 2
 
-  // Soft pulse on hover: glow scale/opacity breathes instead of
-  // snapping, via a sine wave gated by isHovered — no state changes
-  // per frame, just ref mutation, so this is cheap even with many
-  // nodes mounted at once.
+  // At rest, the glow sits at a low, steady IDLE_GLOW_OPACITY — quiet
+  // enough that it reads as a subtle accent rather than the dominant
+  // shape. Only on hover does it pulse up toward HOVER_GLOW_OPACITY,
+  // and only for the specific node being hovered (isHovered is this
+  // node's own state from ProductNode, not shared), so intensifying
+  // one node's glow no longer washes out its neighbors or reads as
+  // "everything glows the same amount all the time."
   useFrame((state) => {
     if (!glowRef.current) return
     if (isHovered) {
       const pulse = Math.sin(state.clock.elapsedTime * 4) * 0.5 + 0.5
-      glowRef.current.scale.setScalar(1 + pulse * 0.18)
+      glowRef.current.scale.setScalar(1 + pulse * 0.15)
       if (glowRef.current.material) {
-        glowRef.current.material.opacity = 0.55 + pulse * 0.25
+        glowRef.current.material.opacity = HOVER_GLOW_OPACITY - pulse * 0.15
       }
     } else {
       glowRef.current.scale.setScalar(
@@ -69,45 +101,48 @@ function CardFrame({ frameColor, planeWidth, planeHeight, isHovered, children })
       )
       if (glowRef.current.material) {
         const mat = glowRef.current.material
-        mat.opacity += (0.55 - mat.opacity) * 0.15
+        mat.opacity += (IDLE_GLOW_OPACITY - mat.opacity) * 0.15
       }
     }
   })
 
   return (
     <group>
-      {/* Soft outer glow — additive, blurred-looking via low opacity
-          + oversized bounds, sits behind everything else. This is what
-          reads as "glowing" rather than a flat rectangle. Pulses on
-          hover via the useFrame above. */}
+      {/* Soft outer glow — small and dim at rest (see IDLE_GLOW_OPACITY
+          above); this is now a subtle accent, not the dominant shape.
+          Pulses brighter only while this specific node is hovered. */}
       <mesh ref={glowRef} renderOrder={-1} position={[0, 0, -0.02]}>
         <planeGeometry args={[glowWidth, glowHeight]} />
         <meshBasicMaterial
           color={frameColor}
           transparent
-          opacity={0.55}
+          opacity={IDLE_GLOW_OPACITY}
           toneMapped={false}
           depthWrite={false}
         />
       </mesh>
 
-      {/* Card frame — thin marketplace-colored border behind the
-          image, giving the "framed card" look from the mockup. */}
+      {/* Card frame — thin marketplace-colored accent line just
+          outside the image edge, not a filled block. Previously this
+          was a large opaque plane (FRAME_PADDING 0.32) that competed
+          with the photo for visual weight; now it's a slim ~0.06-unit
+          border, closer to a real product card's edge highlight. */}
       <mesh renderOrder={0} position={[0, 0, -0.01]}>
         <planeGeometry args={[frameWidth, frameHeight]} />
         <meshBasicMaterial
           color={frameColor}
           transparent
-          opacity={0.9}
+          opacity={0.85}
           toneMapped={false}
           depthWrite={false}
         />
       </mesh>
 
-      {/* Dark backing so the frame border is actually visible as a
-          border rather than being fully covered by the image. */}
+      {/* Dark backing, trimmed to just barely peek past the image
+          edge (enough to show the frame accent as a visible line)
+          rather than a wide dark margin. */}
       <mesh renderOrder={0} position={[0, 0, -0.005]}>
-        <planeGeometry args={[planeWidth + FRAME_PADDING * 0.6, planeHeight + FRAME_PADDING * 0.6]} />
+        <planeGeometry args={[planeWidth + FRAME_PADDING * 0.9, planeHeight + FRAME_PADDING * 0.9]} />
         <meshBasicMaterial color="#05050c" toneMapped={false} depthWrite={false} />
       </mesh>
 
@@ -187,11 +222,31 @@ function FallbackCard({ frameColor, planeWidth, planeHeight, isHovered, initial 
   )
 }
 
-function ProductImage({ url, position, color = '#ffffff', name = '', priceScale = 0.5, isHovered = false }) {
+function ProductImage({ url, position, color = '#ffffff', name = '', priceScale = 0.5, isHovered = false, seed = '' }) {
+  const jitterSeed = seed || url || name || '0,0,0'.concat(position.join(','))
+
+  // Deterministic per-node variance: a small in-plane rotation (so
+  // cards don't all sit perfectly upright/aligned, breaking up the
+  // "grid of identical squares" read) and a small extra forward/
+  // lateral offset (so nodes placed close together in the spiral
+  // don't sit at the exact same depth and visually fuse). Both are
+  // tiny relative to card size — this is meant to read as natural
+  // variation, not chaos.
+  const rotationZ = useMemo(
+    () => (hashToUnit(`${jitterSeed}-rot`) - 0.5) * 2 * ROTATION_JITTER_RAD,
+    [jitterSeed]
+  )
+  const extraOffset = useMemo(() => {
+    const ox = (hashToUnit(`${jitterSeed}-ox`) - 0.5) * 2 * OFFSET_JITTER
+    const oy = (hashToUnit(`${jitterSeed}-oy`) - 0.5) * 2 * OFFSET_JITTER * 0.6
+    const oz = hashToUnit(`${jitterSeed}-oz`) * OFFSET_JITTER * 0.8
+    return [ox, oy, oz]
+  }, [jitterSeed])
+
   const billboardPosition = [
-    position[0],
-    position[1],
-    position[2] + FORWARD_OFFSET,
+    position[0] + extraOffset[0],
+    position[1] + extraOffset[1],
+    position[2] + FORWARD_OFFSET + extraOffset[2],
   ]
 
   const { size } = useThree()
@@ -212,7 +267,7 @@ function ProductImage({ url, position, color = '#ffffff', name = '', priceScale 
 
   return (
     <Billboard position={billboardPosition}>
-      <group scale={sizeMultiplier}>
+      <group scale={sizeMultiplier} rotation={[0, 0, rotationZ]}>
         {url ? (
           <ImageErrorBoundary
             fallback={

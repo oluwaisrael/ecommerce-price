@@ -22,9 +22,20 @@ import styles from './ProductNode.module.css'
  * pass min/max price context it may not have.
  */
 const NODE_RADIUS = 0.5
-const HOVER_SCALE = 1.5
-const SELECTED_SCALE = 1.3
+const HOVER_SCALE = 1.4
+const SELECTED_SCALE = 1.25
 const LERP_SPEED = 0.15
+
+// The interaction sphere sits directly behind the ProductImage
+// billboard. Its idle emissive was previously 0.3 — bright enough,
+// combined with the (now-fixed) oversized ProductImage glow, to read
+// as a second layer of "colored blob" behind every card even at rest.
+// Dropped further at idle so the sphere reads as a faint anchor point
+// rather than contributing its own glow; it still brightens on hover/
+// selection same as before, via targetEmissive below.
+const IDLE_EMISSIVE = 0.12
+const HOVER_EMISSIVE = 0.7
+const SELECTED_EMISSIVE = 0.9
 
 function formatPrice(price) {
   return new Intl.NumberFormat('en-NG', {
@@ -39,7 +50,7 @@ function ProductNode({ node, isSelected, onSelect }) {
   const [isHovered, setIsHovered] = useState(false)
 
   const targetScale = isSelected ? SELECTED_SCALE : isHovered ? HOVER_SCALE : 1
-  const targetEmissive = isSelected ? 0.9 : isHovered ? 0.7 : 0.3
+  const targetEmissive = isSelected ? SELECTED_EMISSIVE : isHovered ? HOVER_EMISSIVE : IDLE_EMISSIVE
 
   // Gentle idle float: a small per-node sine offset added on top of
   // the node's fixed layout position, so nodes feel alive rather than
@@ -99,7 +110,7 @@ function ProductNode({ node, isSelected, onSelect }) {
         <meshStandardMaterial
           color={node.color}
           emissive={node.color}
-          emissiveIntensity={0.3}
+          emissiveIntensity={IDLE_EMISSIVE}
           roughness={0.4}
           metalness={0.1}
         />
@@ -112,6 +123,7 @@ function ProductNode({ node, isSelected, onSelect }) {
         name={node.name}
         priceScale={priceScale}
         isHovered={isHovered}
+        seed={String(node.id)}
       />
 
       {showCard && (
