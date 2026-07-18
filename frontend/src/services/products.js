@@ -7,6 +7,7 @@ export async function getProducts() {
   return data.products ?? []
 }
 
+
 export async function getProductHistory(url) {
   const { data } = await apiClient.get('/api/products/history', {
     params: { url },

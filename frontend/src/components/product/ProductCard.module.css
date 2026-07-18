@@ -40,3 +40,16 @@
   font-size: 0.75rem;
   opacity: 0.6;
 }
+.card {
+  cursor: pointer;
+}
+
+.card:hover,
+.card:focus-visible {
+  opacity: 0.85;
+}
+
+.card:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
