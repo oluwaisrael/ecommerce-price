@@ -29,21 +29,29 @@
 // "galaxies breathe, don't feel boxed-in" framing. These numbers are
 // paired with CameraRig's DEFAULT_CAMERA_POSITION/target offset —
 // changing one without the other will throw off the composition.
+// Centers widened proportionally to the GALAXY_RADIUS increase
+// (18->26, ~45%) — the previous gap (56.9 units apart) was sized for
+// radius-18 galaxies and would let the larger galaxies' haze/arms
+// overlap in the middle. New spacing keeps the same relative gap.
 const GALAXY_CENTERS = {
-  Jumia: { x: 14, z: -6 },
-  Jiji: { x: 68, z: -24 },
+  // Nudged +6x/-4z from (14,-9) — a small shift to ease Jumia's outer
+  // ring overlapping the hero text/search bar, without moving the
+  // whole camera again (a full pan previously overcorrected badly).
+  Jumia: { x: 20, z: -13 },
+  Jiji: { x: 92, z: -34 },
 }
 const DEFAULT_GALAXY_CENTER = { x: 0, z: 0 }
 
 const MIN_HEIGHT = -2.5
 const MAX_HEIGHT = 4.5
 
-// Spiral shape. With ~66/15 real nodes per galaxy (sparse compared to
-// a real star field), the radius/scatter here are deliberately small
-// and tight so the few points available still trace a legible curve
-// instead of reading as scattered clumps. GALAXY_RADIUS keeps the
-// outermost arm well inside the ~64-unit gap between centers.
-const GALAXY_RADIUS = 18
+// Radius increased 18 -> 26 (~45%) to make galaxies read as dominant,
+// frame-filling elements per the reference mockup rather than small
+// floating clusters. FILLER_STARS_PER_ARM and HAZE_POINTS_PER_GALAXY
+// below are scaled up in proportion so density-per-unit-area stays
+// constant — a bigger radius alone would just spread the same star
+// count thinner and look emptier, the opposite of the goal.
+const GALAXY_RADIUS = 26
 const CORE_RADIUS = 0.6
 const ARM_COUNT = 2
 // Slightly more wind than before (0.95 -> 1.35) — at under one full
@@ -135,8 +143,21 @@ function priceToHeight(price, minPrice, maxPrice) {
  * plain incrementing index guarantees clean, even spread regardless
  * of any structure in the underlying id string.
  */
-function spiralPosition(id, index) {
-  const tRadius = hashToUnit(`${index}-${id}-t`)
+function spiralPosition(id, index, total = 1) {
+  // Blend the random hash with a deterministic index-based spread.
+  // With hundreds of real nodes the hash alone averages out to a
+  // proper sqrt-biased density falloff, but a small sample (e.g.
+  // Jumia's 11 products) can land mostly inward purely by chance —
+  // there's no law of large numbers to smooth it out. Folding in a
+  // small deterministic component (index/total, evenly covering 0-1)
+  // guarantees low-count galaxies still reach the outer radius, while
+  // barely perturbing high-count galaxies where the hash already
+  // averages correctly.
+  const hashT = hashToUnit(`${index}-${id}-t`)
+  const evenT = total > 1 ? index / (total - 1) : hashT
+  const spreadWeight = Math.max(0, 1 - total / 40) // fades out by ~40 nodes
+  const tRadius = hashT * (1 - spreadWeight) + evenT * spreadWeight
+
   const armPick = Math.floor(hashToUnit(`${index}-${id}-arm`) * ARM_COUNT)
   const armOffset = (armPick / ARM_COUNT) * Math.PI * 2
 
@@ -169,10 +190,18 @@ export function computeGalaxyLayout(nodes) {
   const minPrice = Math.min(...prices)
   const maxPrice = Math.max(...prices)
 
-  return nodes.map((node, index) => {
+  const siteCounts = nodes.reduce((acc, n) => {
+    acc[n.site] = (acc[n.site] ?? 0) + 1
+    return acc
+  }, {})
+  const siteRunningIndex = {}
+
+  return nodes.map((node) => {
     const center = galaxyCenter(node.site)
     const height = priceToHeight(node.price, minPrice, maxPrice)
-    const { x, z, yJitter } = spiralPosition(node.id, index)
+    const siteIndex = siteRunningIndex[node.site] ?? 0
+    siteRunningIndex[node.site] = siteIndex + 1
+    const { x, z, yJitter } = spiralPosition(node.id, siteIndex, siteCounts[node.site])
 
     // Same log-normalization as priceToHeight, exposed as a plain 0..1
     // scalar (not remapped into MIN_HEIGHT..MAX_HEIGHT) so the
@@ -229,8 +258,8 @@ export function getDiscTiltRadians() {
  * visible curved line. Small hashed jitter is layered on top only to
  * keep the line from looking mechanically perfect.
  */
-const FILLER_STARS_PER_ARM = 220
-const HAZE_POINTS_PER_GALAXY = 90
+const FILLER_STARS_PER_ARM = 320
+const HAZE_POINTS_PER_GALAXY = 130
 
 // Depth (perpendicular-to-disc) variance for filler stars — small
 // additional jitter along the disc's local "thickness" axis so the

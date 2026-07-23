@@ -202,15 +202,26 @@ function FallbackCard({ frameColor, planeWidth, planeHeight, isHovered, initial 
           already use via drei's Html) centered on the card, styled
           inline so this file stays self-contained. distanceFactor
           keeps it screen-space-consistent with everything else that
-          uses Html in this scene. */}
+          uses Html in this scene.
+
+          NOTE: distanceFactor scaling is relative to camera distance,
+          so a fixed px font-size here can render enormous for any
+          node that ends up close to the camera (this is what was
+          previously mistaken for a stray "search icon"/giant glyph
+          artifact in the hero — with the current product data having
+          no working images, every card in a galaxy falls back to
+          this letter, so the bug was highly visible). Sized down and
+          clamped so it can never exceed a small, card-appropriate
+          footprint regardless of distance. */}
       <Html center distanceFactor={10} occlude={false} renderOrder={2}>
         <div
           style={{
             fontFamily: 'system-ui, sans-serif',
             fontWeight: 700,
-            fontSize: '22px',
+            fontSize: 'clamp(8px, 1vw, 13px)',
+            lineHeight: 1,
             color: frameColor,
-            textShadow: `0 0 12px ${frameColor}`,
+            textShadow: `0 0 6px ${frameColor}`,
             userSelect: 'none',
             pointerEvents: 'none',
           }}

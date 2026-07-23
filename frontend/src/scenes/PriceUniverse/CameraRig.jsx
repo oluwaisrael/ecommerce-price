@@ -3,16 +3,34 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { OrbitControls } from '@react-three/drei'
 import * as THREE from 'three'
 
-// Pulled back and raised from the original (24,14,72)/(38,2,-14) pair —
-// at that distance the orbit rings (radius up to ~15) filled most of
-// the frame edge-to-edge, reading as solid arcs instead of the thin
-// distant threads in the reference mockup. Backing off to a wider,
-// higher vantage lets both galaxies (centers at x:14/z:-6 and
-// x:68/z:-24, radius 18 each) sit fully inside frame with breathing
-// room, matching the "both galaxies visible, generous margin" framing
-// of the reference image.
-const DEFAULT_CAMERA_POSITION = new THREE.Vector3(30, 20, 92)
-const DEFAULT_TARGET = new THREE.Vector3(41, 1, -15)
+// Pulled in closer than the previous pass (30,20,92) — that framing
+// correctly avoided occlusion/distortion but left both galaxies
+// reading small relative to the reference mockup, where each galaxy
+// occupies roughly half the hero's width. This is a moderate ~25%
+// distance reduction, paired with a small GALAXY_RADIUS bump in
+// galaxyLayout.js, rather than one large change on either lever —
+// distance-only changes have previously overshot into occlusion or
+// undershot into tininess when adjusted alone.
+// Target/position updated for the widened galaxy centers (radius
+// 18->26 required moving centers from x:14/68 to x:14/92 to avoid
+// overlap) — target re-centered to the new midpoint (~53,-21), camera
+// pulled back moderately from the previous (24,16,70) to keep both
+// larger galaxies fully in frame without re-introducing the occlusion
+// issues hit when this was tuned for the smaller radius.
+// Target/position updated for the widened galaxy centers (radius
+// 18->26 required moving centers from x:14/68 to x:14/92 to avoid
+// overlap) — target re-centered to the new midpoint (~53,-21), camera
+// pulled back moderately from the previous (24,16,70) to keep both
+// larger galaxies fully in frame without re-introducing the occlusion
+// issues hit when this was tuned for the smaller radius.
+//
+// A later +10x pan (to clear Jumia from the text panel) was reverted —
+// it overcorrected, pushing Jumia almost entirely off-frame and
+// placing Jupiter's new position directly behind the text instead.
+// The text-overlap issue is being fixed by moving Jupiter, not by
+// panning the whole camera again.
+const DEFAULT_CAMERA_POSITION = new THREE.Vector3(30, 20, 88)
+const DEFAULT_TARGET = new THREE.Vector3(53, 1, -21)
 const FOCUS_DISTANCE = 5
 const LERP_SPEED = 0.06
 const ARRIVE_EPSILON = 0.15

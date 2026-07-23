@@ -12,21 +12,26 @@ function Hero({ searchValue, onSearchChange }) {
       </div>
 
       <div className={styles.content}>
-        <span className={styles.eyebrow}>Welcome to Derin's Price Intelligence</span>
-        <h1 className={styles.title}>Track prices across Jumia and Jiji</h1>
+        <span className={styles.eyebrow}>Welcome to Derin's</span>
+        <h1 className={styles.title}>
+          Price
+          <br />
+          <span className={styles.titleAccent}>Intelligence</span>
+        </h1>
         <p className={styles.subtitle}>
-          Search a product to see its price history and get notified when it drops.
+          Track prices across Jumia and Jiji.
+          <br />
+          Get notified when prices drop.
         </p>
         <SearchInput value={searchValue} onChange={onSearchChange} />
-        
+
         {/* Popular Searches - Shows when search is empty */}
         {!searchValue && (
           <PopularSearches onSearchSelect={onSearchChange} />
         )}
-      </div>
 
-      {/* Stats Cards - Positioned bottom-left */}
-      <StatsCards />
+        <StatsCards />
+      </div>
     </section>
   )
 }

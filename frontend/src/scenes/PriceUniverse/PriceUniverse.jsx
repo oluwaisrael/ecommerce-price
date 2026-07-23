@@ -66,7 +66,7 @@ function PriceUniverse({ searchValue = '' }) {
   return (
     <div className={styles.canvasWrapper}>
       <Canvas
-        camera={{ position: [18, 22, 82], fov: 50, far: 2000 }}
+        camera={{ position: [30, 20, 88], fov: 50, far: 2000 }}
         onPointerMissed={() => setSelectedId(null)}
       >
         <color attach="background" args={['#03030a']} />
@@ -86,10 +86,10 @@ function PriceUniverse({ searchValue = '' }) {
         <pointLight position={[-30, 8, 20]} intensity={0.4} color="#8899ff" />
 
         <Stars
-          radius={220}
-          depth={90}
+          radius={160}
+          depth={70}
           count={13000}
-          factor={4}
+          factor={5}
           saturation={0}
           fade
           speed={0.5}
@@ -100,7 +100,8 @@ function PriceUniverse({ searchValue = '' }) {
             matches the mockup's soft violet cloud behind the hero
             text. Positioned left/back of the camera target so it
             doesn't wash out the galaxies themselves. */}
-        <AmbientNebula position={[-30, 10, -30]} color="#6a4fd9" radius={55} opacity={0.16} />
+        <AmbientNebula position={[-30, 10, -30]} color="#6a4fd9" radius={68} opacity={0.26} />
+        <AmbientNebula position={[130, -20, -80]} color="#2dd4bf" radius={60} opacity={0.14} />
         
          {Object.entries(galaxyCenters).map(([site, center]) => (
           <GalaxyNebula

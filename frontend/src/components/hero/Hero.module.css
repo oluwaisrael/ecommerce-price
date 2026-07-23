@@ -49,6 +49,13 @@
   text-shadow: 0 4px 24px rgba(0, 0, 0, 0.6);
 }
 
+.titleAccent {
+  background: linear-gradient(90deg, #ffffff 0%, #a78bfa 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
 .subtitle {
   margin: 0;
   font-size: 1.05rem;
